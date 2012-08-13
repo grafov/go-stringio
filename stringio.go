@@ -5,14 +5,15 @@
 package stringio
 
 import (
-    "fmt"
-    "os"
+	"fmt"
+	"io"
     "syscall"
+	"errors"
 )
 
 const buf_size = 4096
 
-var OSError os.Error = os.NewError("I/O operation on closed file")
+var OSError error = errors.New("I/O operation on closed file")
 
 // A stringIO object is similar to a File object.
 // It mimics all File I/O operations by implementing the
@@ -47,8 +48,8 @@ func StringIO() *stringIO {
 }
 
 // Query for stringio object's fd is an error.
-func (s *stringIO) Fd() (fd int, err os.Error) {
-    return -1, os.EINVAL
+func (s *stringIO) Fd() (fd int, err error) {
+    return -1, syscall.EINVAL
 }
 
 func (s *stringIO) GoString() string { return s.name }
@@ -80,7 +81,7 @@ func (s *stringIO) GetValueBytes() []byte {
 }
 
 // Call Close will release the buffer/memory.
-func (s *stringIO) Close() (err os.Error) {
+func (s *stringIO) Close() (err error) {
     s.Truncate(0)
     s.isclosed = true
     s.name = "StringIO <closed>"
@@ -98,7 +99,7 @@ func (s *stringIO) Truncate(n int) {
     }
 }
 
-func (s *stringIO) Seek(offset int64, whence int) (ret int64, err os.Error) {
+func (s *stringIO) Seek(offset int64, whence int) (ret int64, err error) {
     if s.isClosed() {
         return 0, OSError
     }
@@ -112,7 +113,7 @@ func (s *stringIO) Seek(offset int64, whence int) (ret int64, err os.Error) {
     case 2:
         ret = offset + length
     default:
-        return 0, os.EINVAL
+        return 0, syscall.EINVAL
     }
     if ret < int64_O {
         ret = int64_O
@@ -130,17 +131,17 @@ func (s *stringIO) Seek(offset int64, whence int) (ret int64, err os.Error) {
     return
 }
 
-func (s *stringIO) Read(b []byte) (n int, err os.Error) {
+func (s *stringIO) Read(b []byte) (n int, err error) {
     if s.isClosed() {
         return 0, OSError
     }
     if s.pos >= len(s.buf) {
-        return 0, os.EOF
+        return 0, io.EOF
     }
     return s.readBytes(b)
 }
 
-func (s *stringIO) ReadAt(b []byte, offset int64) (n int, err os.Error) {
+func (s *stringIO) ReadAt(b []byte, offset int64) (n int, err error) {
     if s.isClosed() {
         return 0, OSError
     }
@@ -150,14 +151,14 @@ func (s *stringIO) ReadAt(b []byte, offset int64) (n int, err os.Error) {
 
 // stringIO Write will always be success until memory is used up
 // or system limit is reached.
-func (s *stringIO) Write(b []byte) (n int, err os.Error) {
+func (s *stringIO) Write(b []byte) (n int, err error) {
     if s.isClosed() {
         return 0, OSError
     }
     return s.writeBytes(b)
 }
 
-func (s *stringIO) WriteAt(b []byte, offset int64) (n int, err os.Error) {
+func (s *stringIO) WriteAt(b []byte, offset int64) (n int, err error) {
     if s.isClosed() {
         return 0, OSError
     }
@@ -165,14 +166,14 @@ func (s *stringIO) WriteAt(b []byte, offset int64) (n int, err os.Error) {
     return s.writeBytes(b)
 }
 
-func (s *stringIO) WriteString(str string) (ret int, err os.Error) {
+func (s *stringIO) WriteString(str string) (ret int, err error) {
     b := syscall.StringByteSlice(str)
     return s.Write(b[0 : len(b)-1])
 }
 
 
 // private methods
-func (s *stringIO) readBytes(b []byte) (n int, err os.Error) {
+func (s *stringIO) readBytes(b []byte) (n int, err error) {
     if s.pos > s.last {
         return 0, nil
     }
@@ -187,7 +188,7 @@ func (s *stringIO) readBytes(b []byte) (n int, err os.Error) {
     return
 }
 
-func (s *stringIO) writeBytes(b []byte) (n int, err os.Error) {
+func (s *stringIO) writeBytes(b []byte) (n int, err error) {
     n = len(b)
     if n > s.length() {
         s.resize(n)
