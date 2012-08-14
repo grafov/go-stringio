@@ -7,7 +7,7 @@ package stringio
 import (
 	"fmt"
 	"io"
-    "syscall"
+	"syscall"
 	"errors"
 )
 
@@ -171,6 +171,9 @@ func (s *stringIO) WriteString(str string) (ret int, err error) {
     return s.Write(b[0 : len(b)-1])
 }
 
+func (s *stringIO) ReadString() string {
+	return string(s.buf[0:s.last])
+}
 
 // private methods
 func (s *stringIO) readBytes(b []byte) (n int, err error) {
